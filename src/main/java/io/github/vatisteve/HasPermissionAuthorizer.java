@@ -19,7 +19,18 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * @author tinhnv - Mar 23 2025
+ * An aspect that authorizes method or class execution based on the permissions specified in the {@link HasPermission} annotation.
+ * This class evaluates the permissions dynamically using SpEL (Spring Expression Language) and checks them against
+ * the permissions provided by the {@link PermissionService}.
+ *
+ * <p>This aspect can be applied to methods or classes annotated with {@link HasPermission}.
+ * It supports both method-level and class-level permission checks.
+ *
+ * @param <T> the type of the subject for which permissions are checked, must be {@link Serializable}
+ * @author tinhnv - Mar 23, 2025
+ * @see HasPermission
+ * @see PermissionService
+ * @see org.springframework.expression.spel.standard.SpelExpressionParser
  */
 @Slf4j
 @Aspect
@@ -29,6 +40,14 @@ public class HasPermissionAuthorizer<T extends Serializable> {
     private final String defaultSubjectPropertyName;
     private final ExpressionParser expressionParser = new SpelExpressionParser();
 
+    /**
+     * Constructs a new {@link HasPermissionAuthorizer} with the specified {@link PermissionService}
+     * and default subject property name.
+     *
+     * @param permissionService the service used to retrieve permissions for a subject
+     * @param defaultSubjectPropertyName the default property name used to resolve the subject
+     * @throws NullPointerException if {@code permissionService} or {@code defaultSubjectPropertyName} is {@code null}
+     */
     public HasPermissionAuthorizer(PermissionService<T> permissionService, String defaultSubjectPropertyName) {
         Objects.requireNonNull(permissionService, "permissionService cannot be null");
         Objects.requireNonNull(defaultSubjectPropertyName, "subjectPropertyName cannot be null");
@@ -36,18 +55,42 @@ public class HasPermissionAuthorizer<T extends Serializable> {
         this.defaultSubjectPropertyName = defaultSubjectPropertyName;
     }
 
+    /**
+     * Pointcut for methods annotated with {@link HasPermission}.
+     *
+     * @param hasPermission the annotation instance
+     */
     @Pointcut("@annotation(hasPermission)")
     public void hasPermissionOnMethod(HasPermission hasPermission) {}
 
+    /**
+     * Pointcut for classes annotated with {@link HasPermission}.
+     *
+     * @param hasPermission the annotation instance
+     */
     @Pointcut("@within(hasPermission)")
     public void hasPermissionOnClass(HasPermission hasPermission) {}
 
+    /**
+     * Checks permissions before executing a method annotated with {@link HasPermission}.
+     *
+     * @param joinPoint the join point representing the method execution
+     * @param hasPermission the annotation instance
+     * @throws PermissionDeniedException if the permission check fails
+     */
     @Before(value = "hasPermissionOnMethod(hasPermission)", argNames = "joinPoint,hasPermission")
     public void checkPermissionOnMethod(JoinPoint joinPoint, HasPermission hasPermission) {
         T subjectValue = getSubject(hasPermission.subject(), joinPoint);
         checkPermission(hasPermission, subjectValue, joinPoint.getSignature().getName());
     }
 
+    /**
+     * Checks permissions before executing a method within a class annotated with {@link HasPermission}.
+     *
+     * @param joinPoint the join point representing the method execution
+     * @param hasPermission the annotation instance
+     * @throws PermissionDeniedException if the permission check fails
+     */
     @Before(value = "hasPermissionOnClass(hasPermission)", argNames = "joinPoint,hasPermission")
     public void checkPermissionOnClass(JoinPoint joinPoint, HasPermission hasPermission) {
         T subjectValue = joinPoint.getKind().equals(JoinPoint.METHOD_EXECUTION)
@@ -56,6 +99,14 @@ public class HasPermissionAuthorizer<T extends Serializable> {
         checkPermission(hasPermission, subjectValue, joinPoint.getSignature().getName());
     }
 
+    /**
+     * Checks if the subject has the required permissions specified in the {@link HasPermission} annotation.
+     *
+     * @param hasPermission the annotation instance
+     * @param subjectValue the subject for which permissions are checked
+     * @param signatureName the name of the method or class being checked
+     * @throws PermissionDeniedException if the permission check fails
+     */
     private void checkPermission(final HasPermission hasPermission, final T subjectValue, String signatureName) {
         if (subjectValue == null) {
             log.warn("Subject value is null for {}, cannot check permissions", signatureName);
@@ -65,6 +116,13 @@ public class HasPermissionAuthorizer<T extends Serializable> {
         throw new PermissionDeniedException(String.format("Access denied for subject [%s] on job [%s]", subjectValue, signatureName));
     }
 
+    /**
+     * Performs the actual permission check based on the {@link HasPermission} annotation.
+     *
+     * @param context the annotation instance
+     * @param subjectValue the subject for which permissions are checked
+     * @return {@code true} if the subject has the required permissions, {@code false} otherwise
+     */
     private boolean doCheckPermission(final HasPermission context, final T subjectValue) {
         // Normalize "of" value, preferring explicit "of" over "value"
         String of = context.of().isEmpty() ? context.value() : context.of();
@@ -97,6 +155,13 @@ public class HasPermissionAuthorizer<T extends Serializable> {
         return true;
     }
 
+    /**
+     * Resolves the subject value using the provided SpEL expression.
+     *
+     * @param expression the SpEL expression to evaluate
+     * @param joinPoint the join point representing the method execution
+     * @return the resolved subject value, or {@code null} if the expression evaluation fails
+     */
     @SuppressWarnings("unchecked")
     private T getSubject(String expression, JoinPoint joinPoint) {
         if (expression == null || expression.isEmpty()) {
@@ -124,6 +189,12 @@ public class HasPermissionAuthorizer<T extends Serializable> {
         }
     }
 
+    /**
+     * Creates an evaluation context for SpEL expression evaluation.
+     *
+     * @param joinPoint the join point representing the method execution
+     * @return the evaluation context populated with method parameters and metadata
+     */
     private StandardEvaluationContext createEvaluationContext(JoinPoint joinPoint) {
         StandardEvaluationContext context = new StandardEvaluationContext();
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
@@ -143,5 +214,4 @@ public class HasPermissionAuthorizer<T extends Serializable> {
         context.setVariable("targetClass", joinPoint.getTarget().getClass());
         return context;
     }
-
 }

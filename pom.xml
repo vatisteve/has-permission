@@ -8,6 +8,29 @@
     <packaging>jar</packaging>
 
     <name>has-permission</name>
+    <description>
+        This project provides a robust permission-checking mechanism for Java applications using Spring AOP
+        (Aspect-Oriented Programming).
+        It includes a customizable annotation (`@HasPermission`) that can be applied to methods or classes to enforce
+        permission-based access control.
+        The permission-checking logic is dynamically evaluated using SpEL (Spring Expression Language), allowing for
+        flexible and context-aware permission resolution.
+
+        Key Features:
+        - **Annotation-Driven Permissions**: Use the `@HasPermission` annotation to specify permission requirements at
+        the method or class level.
+        - **Dynamic Permission Resolution**: Supports SpEL expressions for dynamic subject resolution and permission
+        evaluation.
+        - **Integration with Permission Services**: Works seamlessly with any `PermissionService` implementation to
+        retrieve permissions for a given subject.
+        - **Aspect-Oriented Design**: Leverages Spring AOP to intercept method calls and perform permission checks
+        before execution.
+        - **Customizable Exception Handling**: Throws `PermissionDeniedException` when access is denied, providing clear
+        and actionable error messages.
+
+        This project is ideal for applications that require fine-grained access control and dynamic permission
+        management, such as enterprise systems, APIs, and web applications.
+    </description>
     <url>https://github.com/vatisteve/has-permission</url>
 
     <properties>
@@ -97,7 +120,6 @@
             <url>https://s01.oss.sonatype.org/service/local/staging/deploy/maven2</url>
         </repository>
     </distributionManagement>
-
     <profiles>
         <profile>
             <id>release</id>
@@ -124,10 +146,11 @@
                     </plugins>
                 </pluginManagement>
                 <plugins>
+                    <!-- GPG Plugin for signing artifacts -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.6</version>
+                        <version>3.0.1</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -138,6 +161,7 @@
                             </execution>
                         </executions>
                     </plugin>
+                    <!-- Javadoc Plugin for generating Javadoc JAR -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
@@ -152,8 +176,10 @@
                         </executions>
                         <configuration>
                             <javadocExecutable>${JAVA_HOME}/bin/javadoc</javadocExecutable>
+                            <source>11</source>
                         </configuration>
                     </plugin>
+                    <!-- Source Plugin for generating source JAR -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-source-plugin</artifactId>

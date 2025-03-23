@@ -1,46 +1,62 @@
 package io.github.vatisteve;
 
-import org.springframework.expression.spel.standard.SpelExpressionParser;
-
+import java.io.Serializable;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotate which method or class need to be checked permission
+ * Indicates that a method or class requires permission checks before execution.
+ * This annotation can be applied to methods or types to specify the permissions
+ * required for access. Permissions can be defined using a single permission,
+ * multiple permissions, or a combination of permissions.
  *
- * @author tinhnv - Jan 15 2025
+ * <p>The annotation supports SpEL (Spring Expression Language) for dynamic
+ * permission evaluation through the {@code subject} attribute.
+ *
+ * @author tinhnv - Jan 15, 2025
+ * @see PermissionService#getPermissions(Serializable)
+ * @see org.springframework.expression.spel.standard.SpelExpressionParser
  */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface HasPermission {
 
     /**
-     * The identifier which is used to get permissions
-     * <b>SpEL</b>
-     * @see SpelExpressionParser
+     * The identifier used to retrieve permissions dynamically.
+     * This attribute supports SpEL (Spring Expression Language) for flexible
+     * permission resolution.
+     *
+     * @return the subject to be used with {@link PermissionService#getPermissions(Serializable)}
      */
     String subject() default "";
 
     /**
-     * alias for {@link #of()}
+     * An alias for {@link #of()}. Specifies a single permission that must be granted.
+     *
+     * @return the permission that must be granted
      */
     String value() default "";
 
     /**
-     * must have this permission
+     * Specifies a single permission that must be granted.
+     *
+     * @return the permission that must be granted
      */
     String of() default "";
 
     /**
-     * must have all of these permissions
+     * Specifies multiple permissions that must all be granted.
+     *
+     * @return an array of permissions that must all be granted
      */
     String[] allOf() default {};
 
     /**
-     * must have one of these permissions
+     * Specifies multiple permissions, at least one of which must be granted.
+     *
+     * @return an array of permissions, at least one of which must be granted
      */
     String[] anyOf() default {};
-
 }
